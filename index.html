@@ -396,6 +396,17 @@
   let progress = 0;   // number of items marked done (green); item[progress] is the current (orange)
   let times = {};     // { itemIndex: "HH:MM" } timestamp when each item was completed
   function nowStamp(){ const d = new Date(), p = n => String(n).padStart(2,"0"); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
+  function timesForDb(){ // store as string keys to avoid array coercion
+    const out = {};
+    for(const k in times) out["i"+k] = times[k];
+    return out;
+  }
+  function timesFromDb(raw){ // restore from string keys
+    if(!raw) return {};
+    const out = {};
+    for(const k in raw) out[k.startsWith("i") ? +k.slice(1) : +k] = raw[k];
+    return out;
+  }
   const fieldEls = {};
   document.querySelectorAll('[data-key]').forEach(el => fieldEls[el.dataset.key] = el);
   const unitEls = {};
@@ -474,7 +485,7 @@
     try{
       localStorage.setItem(KEY, JSON.stringify({
         progress: progress,
-        times: times,
+        times: timesForDb(times),
         fields: Object.fromEntries(Object.entries(fieldEls).map(([k,el]) => [k, el.value])),
         unit: Object.fromEntries(Object.entries(unitEls).map(([k,el]) => [k, el.checked]))
       }));
@@ -485,7 +496,7 @@
       const raw = localStorage.getItem(KEY); if(!raw) return;
       const d = JSON.parse(raw);
       if(typeof d.progress === "number") progress = Math.max(0, Math.min(switches.length, d.progress));
-      if(d.times) times = d.times;
+      if(d.times) times = timesFromDb(d.times);
       if(d.fields) for(const k in fieldEls) if(d.fields[k]!=null) fieldEls[k].value = d.fields[k];
       if(d.unit) for(const k in unitEls) if(d.unit[k]!=null) unitEls[k].checked = !!d.unit[k];
     }catch(e){}
@@ -493,8 +504,17 @@
 
   function applyRemote(data){
     applyingRemote = true;
-    progress = (data && typeof data.progress === "number") ? Math.max(0, Math.min(switches.length, data.progress)) : 0;
-    times = (data && data.times) || {};
+    const remoteProgress = (data && typeof data.progress === "number")
+      ? Math.max(0, Math.min(switches.length, data.progress)) : 0;
+    const remoteTimes = timesFromDb(data && data.times);
+    // only apply remote if it is at least as advanced as local (prevents stale snapshot rollback)
+    if(remoteProgress >= progress){
+      progress = remoteProgress;
+      // merge: keep local times that remote doesn't have yet (write-in-flight)
+      times = Object.assign({}, remoteTimes, times);
+      // but don't keep local times for items that remote says aren't done
+      for(const k in times){ if(+k >= progress) delete times[+k]; }
+    }
     const fields = (data && data.fields) || {};
     for(const k in fieldEls){
       const el = fieldEls[k];
@@ -509,7 +529,13 @@
   }
 
   function touchMeta(){ if(online) db.ref(BASE + "/meta").update({ updatedAt: Date.now(), updatedBy: DEV }); }
-  function commit(){ if(online){ db.ref(BASE + "/progress").set(progress); db.ref(BASE + "/times").set(times); touchMeta(); } saveLocal(); }
+  function commit(){
+    if(online && db){
+      db.ref(BASE + "/progress").set(progress);
+      db.ref(BASE + "/times").set(Object.keys(times).length ? timesForDb(times) : null);
+      touchMeta();
+    }
+  }
   function writeField(k, val){ if(online){ db.ref(BASE + "/fields").update({ [k]: val }); touchMeta(); } saveLocal(); }
   function writeUnit(k, val){ if(online){ db.ref(BASE + "/unit").update({ [k]: val }); touchMeta(); } saveLocal(); }
 
@@ -538,14 +564,17 @@
     if(i === progress){                 // complete the current (orange) item
       times[i] = nowStamp();
       progress = i + 1;
-      refreshUI(); commit();
+      saveLocal();                      // persist immediately, before any async Firebase
+      refreshUI();
+      commit();
       if(progress === switches.length) openReporterModal();
     } else if(i === progress - 1){      // revert the most recent (green) item
       delete times[i];
       progress = i;
-      refreshUI(); commit();
+      saveLocal();
+      refreshUI();
+      commit();
     }
-    // items out of turn (red future / earlier green) are not actionable
   });
 
   document.addEventListener("change", e => {

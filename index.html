@@ -131,14 +131,15 @@
     text-align:center;letter-spacing:.04em;display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
   .statusbar b{color:var(--ok)}
 
+  .c-item .mcond{display:none}
   @media screen and (max-width:680px){
     .head-top{grid-template-columns:1fr}
     .meta.left,.meta.right{border:none;border-bottom:1px solid var(--line)}
     .colhead,.row-item{grid-template-columns:42px 1fr 70px}
     .colhead>div:nth-child(3),.cell.c-cond{display:none}
-    .c-item .mcond{display:inline-block;margin-top:3px}
+    .c-item{flex-direction:column;align-items:flex-start;gap:5px}
+    .c-item .mcond{display:inline-block;margin-top:0}
   }
-  .c-item .mcond{display:none}
 
   @media print{
     @page{size:A4 portrait;margin:7mm}

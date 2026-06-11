@@ -72,9 +72,9 @@
     border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
   .unit-pick input:focus-visible{outline:2px solid #1769aa;outline-offset:1px}
 
-  .colhead{display:grid;grid-template-columns:54px 1fr 220px 86px;background:var(--ink);color:#fff;
-    font-weight:700;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;}
-  .colhead>div{padding:7px 10px;border-right:1px solid #303a44;text-align:center}
+  .colhead{display:grid;grid-template-columns:52px 1fr 178px 80px 64px;background:var(--ink);color:#fff;
+    font-weight:700;font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;}
+  .colhead>div{padding:7px 6px;border-right:1px solid #303a44;text-align:center}
   .colhead>div:nth-child(2){text-align:left}
   .colhead>div:last-child{border-right:none}
 
@@ -83,7 +83,7 @@
   .band .pill{font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(255,255,255,.16);
     padding:1px 7px;border-radius:20px;letter-spacing:.1em;}
 
-  .row-item{display:grid;grid-template-columns:54px 1fr 220px 86px;border-bottom:1px solid var(--line);position:relative;}
+  .row-item{display:grid;grid-template-columns:52px 1fr 178px 80px 64px;border-bottom:1px solid var(--line);position:relative;}
   .row-item:hover{background:#f3f8f7}
   .row-item.checked{background:#eef7f1}
   .cell{padding:8px 10px;display:flex;align-items:center;border-right:1px solid var(--line);min-width:0}
@@ -94,16 +94,22 @@
   .cond-tag{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--tag);
     background:#e7f0ef;border:1px solid #bcd6d2;padding:2px 7px;border-radius:5px;line-height:1.25;white-space:normal;}
   .c-done{justify-content:center}
+  .c-time{justify-content:center;font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-align:center}
 
-  .chk{position:relative;width:24px;height:24px;cursor:pointer}
-  .chk input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
-  .chk .box{width:24px;height:24px;border:1.5px solid var(--line-strong);border-radius:5px;background:#fff;
-    display:flex;align-items:center;justify-content:center;transition:all .12s ease;}
-  .chk .box svg{width:15px;height:15px;stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;
-    stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .18s ease}
-  .chk input:checked + .box{background:var(--ok);border-color:var(--ok)}
-  .chk input:checked + .box svg{stroke-dashoffset:0}
-  .chk input:focus-visible + .box{outline:2px solid #1769aa;outline-offset:2px}
+  /* sliding 3-state switch: red=locked, orange=current, green=done */
+  .sw{border:none;background:none;padding:0;cursor:pointer;display:inline-flex;line-height:0}
+  .sw-track{display:block;width:46px;height:26px;border-radius:13px;position:relative;
+    background:#cdd3da;transition:background .2s ease}
+  .sw-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .2s ease}
+  .sw.red   .sw-track{background:#d8423b}
+  .sw.orange .sw-track{background:#e8912a}
+  .sw.green .sw-track{background:#1f9d57}
+  .sw.green .sw-thumb{left:23px}
+  .sw.red{cursor:not-allowed}
+  .sw.orange .sw-track{animation:swpulse 1.6s ease-in-out infinite}
+  @keyframes swpulse{0%,100%{box-shadow:0 0 0 0 rgba(232,145,42,.0)}50%{box-shadow:0 0 0 4px rgba(232,145,42,.28)}}
+  .sw:focus-visible .sw-track{outline:2px solid #1769aa;outline-offset:2px}
 
   .iso-wrap{position:relative}
   .iso-label{position:absolute;left:0;top:0;bottom:0;width:26px;background:var(--band);color:var(--band-ink);
@@ -117,15 +123,24 @@
     color:var(--ink);border:1px solid var(--line);border-radius:6px;background:var(--field);padding:8px 10px;}
   .remark textarea:focus{outline:none;border-color:var(--accent);background:#fffdf3}
 
-  .signs{display:grid;grid-template-columns:repeat(3,1fr)}
-  .sign{padding:16px 14px 14px;text-align:center;border-right:1px solid var(--line)}
-  .sign:last-child{border-right:none}
-  .sign .role{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:30px}
-  .sign .nameline{border-top:1px dotted var(--line-strong);padding-top:6px}
-  .sign .nameline span{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
-  .sign input{display:block;width:100%;text-align:center;font:inherit;font-size:13px;border:none;
-    border-bottom:1px solid var(--line-strong);background:transparent;padding:2px 4px;margin-bottom:4px;}
-  .sign input:focus{outline:none;border-bottom-color:var(--accent);background:#fffceb}
+  .reportby{display:flex;align-items:center;gap:12px;padding:16px 16px}
+  .rb-label{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+  .reportby input{flex:1;font:inherit;font-size:14px;color:var(--ink);border:none;
+    border-bottom:1.5px solid var(--line-strong);background:transparent;padding:6px 4px;}
+  .reportby input:focus{outline:none;border-bottom-color:var(--accent);background:#fffceb}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(20,28,34,.5);display:flex;align-items:center;
+    justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(2px)}
+  .modal-backdrop[hidden]{display:none}
+  .modal{background:#fff;border-radius:14px;max-width:380px;width:100%;padding:22px 22px 18px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalIn .18s ease}
+  @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .modal h3{margin:0 0 4px;font-size:17px;color:var(--ink)}
+  .modal p{margin:0 0 14px;font-size:13px;color:var(--ink-soft)}
+  .modal input{width:100%;font:inherit;font-size:15px;color:var(--ink);border:1.5px solid var(--line-strong);
+    border-radius:8px;padding:10px 12px;background:var(--field)}
+  .modal input:focus{outline:none;border-color:var(--accent);background:#fffdf3}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 
   .statusbar{max-width:920px;margin:14px auto 0;font-family:var(--mono);font-size:12px;color:var(--ink-soft);
     text-align:center;letter-spacing:.04em;display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
@@ -135,8 +150,9 @@
   @media screen and (max-width:680px){
     .head-top{grid-template-columns:1fr}
     .meta.left,.meta.right{border:none;border-bottom:1px solid var(--line)}
-    .colhead,.row-item{grid-template-columns:42px 1fr 70px}
+    .colhead,.row-item{grid-template-columns:40px 1fr 56px 52px}
     .colhead>div:nth-child(3),.cell.c-cond{display:none}
+    .c-time{font-size:9px}
     .c-item{flex-direction:column;align-items:flex-start;gap:5px}
     .c-item .mcond{display:inline-block;margin-top:0}
   }
@@ -150,10 +166,13 @@
     .sheet{box-shadow:none;border:1.2px solid #000;max-width:none;width:100%}
     .row-item:hover,.row-item.checked{background:#fff}
     /* checkboxes print as black outline + black tick, regardless of "Background graphics" */
-    .chk .box{border:1.75px solid #000!important;background:transparent!important;border-radius:4px}
-    .chk .box svg{stroke:#000!important;display:none}
-    .chk input:checked + .box{background:transparent!important;border-color:#000!important}
-    .chk input:checked + .box svg{display:block!important;stroke-dashoffset:0!important;stroke:#000!important}
+    /* switches print in colour (status visible) regardless of "Background graphics" */
+    .modal-backdrop{display:none!important}
+    .sw-track{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .sw.red .sw-track{background:#d8423b!important}
+    .sw.orange .sw-track{background:#e8912a!important}
+    .sw.green .sw-track{background:#1f9d57!important}
+    .sw.orange .sw-track{animation:none!important;box-shadow:none!important}
     .unit-pick input{border:1.5px solid #000!important;background:transparent!important;
       -webkit-print-color-adjust:exact;print-color-adjust:exact}
     .unit-pick input:checked::after{border-color:#000!important}
@@ -175,26 +194,27 @@
     .title-block .t3{font-size:8px}
     .title-block .gsp{font-size:10px;margin-top:2px}
     .docline{padding:2px 7px;font-size:8.5px;gap:8px}
-    .colhead,.row-item{grid-template-columns:38px 1fr 160px 62px}
+    .colhead,.row-item{grid-template-columns:34px 1fr 150px 54px 50px}
     .colhead>div{padding:2.5px 5px;font-size:8px;letter-spacing:.02em}
+    .c-time{font-size:8px}
     .band{padding:2px 7px;font-size:8.5px}
     .band .pill{font-size:7.5px;padding:1px 5px}
     .cell{padding:2px 7px}
     .c-step{font-size:9.5px}
     .c-item{font-size:9px;line-height:1.2}
     .cond-tag{font-size:8px;padding:1px 5px}
-    .chk,.chk .box{width:14px;height:14px}
-    .chk .box svg{width:9px;height:9px}
+    .sw-track{width:38px;height:20px}
+    .sw-thumb{width:15px;height:15px}
+    .sw.green .sw-thumb{left:20px}
     .iso-label{width:18px;font-size:8.5px;letter-spacing:.12em}
     .iso-wrap .row-item .c-step{padding-left:22px}
     .remark{padding:3px 7px}
     .remark label{font-size:8.5px}
     .remark textarea{min-height:26px;font-size:9px;padding:3px 6px}
-    .signs .sign{padding:7px 8px}
-    .sign .role{margin-bottom:16px;font-size:8.5px}
-    .sign .nameline span{font-size:8.5px}
-    .sign input{font-size:9px}
-    .row-item,.band,.signs,.remark,.head{break-inside:avoid}
+    .reportby{padding:8px 10px}
+    .rb-label{font-size:9px}
+    .reportby input{font-size:11px}
+    .row-item,.band,.remark,.reportby,.head{break-inside:avoid}
   }
 </style>
 </head>
@@ -243,7 +263,7 @@
       </div>
     </div>
 
-    <div class="colhead"><div>Step</div><div>Item</div><div>Condition</div><div>Complete</div></div>
+    <div class="colhead"><div>Step</div><div>Item</div><div>Condition</div><div>Complete</div><div>Time</div></div>
     <div id="body"></div>
 
     <div class="remark">
@@ -251,16 +271,34 @@
       <textarea id="fRemark" data-key="remark" placeholder="Note any abnormal condition, action taken, or reference…"></textarea>
     </div>
 
-    <div class="signs">
-      <div class="sign"><div class="role">Reporter</div>
-        <input type="text" data-key="rep" aria-label="Reporter name">
-        <div class="nameline"><span>(&nbsp;&nbsp;name&nbsp;/&nbsp;signature&nbsp;&nbsp;)</span></div></div>
-      <div class="sign"><div class="role">Approved by Supervisor</div>
-        <input type="text" data-key="sup" aria-label="Supervisor name">
-        <div class="nameline"><span>(&nbsp;&nbsp;name&nbsp;/&nbsp;signature&nbsp;&nbsp;)</span></div></div>
-      <div class="sign"><div class="role">Approved by Chief in Charge</div>
-        <input type="text" data-key="chief" aria-label="Chief in charge name">
-        <div class="nameline"><span>(&nbsp;&nbsp;name&nbsp;/&nbsp;signature&nbsp;&nbsp;)</span></div></div>
+    <div class="reportby">
+      <label class="rb-label" for="reportInput">Report by</label>
+      <input type="text" id="reportInput" data-key="reportby" placeholder="ชื่อผู้รายงาน / ผู้ตรวจเช็ค" aria-label="Report by">
+    </div>
+  </div>
+
+  <!-- reporter modal (shown after the final item is checked) -->
+  <div class="modal-backdrop" id="reporterModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">บันทึกผู้รายงาน</h3>
+      <p>ตรวจเช็คครบทุกรายการแล้ว — กรอกชื่อผู้รายงาน</p>
+      <input type="text" id="modalName" placeholder="ชื่อ - นามสกุล" autocomplete="off">
+      <div class="modal-actions">
+        <button class="btn" id="modalCancel" type="button">ยกเลิก</button>
+        <button class="btn primary" id="modalSave" type="button">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- confirm modal (used by Reset) -->
+  <div class="modal-backdrop" id="confirmModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h3 id="confirmTitle">รีเซ็ตฟอร์ม</h3>
+      <p id="confirmMsg"></p>
+      <div class="modal-actions">
+        <button class="btn" id="confirmNo" type="button">ยกเลิก</button>
+        <button class="btn danger" id="confirmYes" type="button">รีเซ็ต</button>
+      </div>
     </div>
   </div>
 
@@ -326,13 +364,16 @@
     ]},
   ];
 
-  const check = `<span class="chk"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg></span></span>`;
+  let GI = 0;
+  const switchHtml = gi => `<button class="sw" type="button" data-idx="${gi}" role="switch" aria-checked="false" aria-label="status"><span class="sw-track"><span class="sw-thumb"></span></span></button>`;
   const itemHtml = it => {
     const cond = it[2] ? `<div class="cell c-cond"><span class="cond-tag">${it[2]}</span></div>` : `<div class="cell c-cond"></div>`;
     const mcond = it[2] ? `<span class="mcond"><span class="cond-tag">${it[2]}</span></span>` : "";
+    const gi = GI++;
     return `<div class="row-item"><div class="cell c-step">${it[0]}</div>
       <div class="cell c-item">${it[1]} ${mcond}</div>${cond}
-      <div class="cell c-done">${check}</div></div>`;
+      <div class="cell c-done">${switchHtml(gi)}</div>
+      <div class="cell c-time" data-idx="${gi}"></div></div>`;
   };
   const sectionHtml = s => {
     const rows = s.items.map(itemHtml).join("");
@@ -343,7 +384,11 @@
   const body = document.getElementById("body");
   body.innerHTML = sections.map(sectionHtml).join("");
 
-  const boxes  = [...body.querySelectorAll('input[type="checkbox"]')];
+  const switches = [...body.querySelectorAll('.sw')];
+  const timeCells = [...body.querySelectorAll('.c-time')];
+  let progress = 0;   // number of items marked done (green); item[progress] is the current (orange)
+  let times = {};     // { itemIndex: "HH:MM" } timestamp when each item was completed
+  function nowStamp(){ const d = new Date(), p = n => String(n).padStart(2,"0"); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
   const fieldEls = {};
   document.querySelectorAll('[data-key]').forEach(el => fieldEls[el.dataset.key] = el);
   const unitEls = {};
@@ -383,11 +428,16 @@
     statusEl.textContent = m[1];
   }
 
-  /* ---------- progress + meta ---------- */
+  /* ---------- render switches from progress + meta ---------- */
   function refreshUI(meta){
-    let done = 0;
-    boxes.forEach(b => { b.closest(".row-item").classList.toggle("checked", b.checked); if(b.checked) done++; });
-    progressEl.innerHTML = `Completed <b>${done}</b> / ${boxes.length}`;
+    switches.forEach((el,i) => {
+      const st = i < progress ? "green" : (i === progress ? "orange" : "red");
+      el.classList.remove("green","orange","red"); el.classList.add(st);
+      el.setAttribute("aria-checked", st === "green" ? "true" : "false");
+      el.closest(".row-item").classList.toggle("checked", st === "green");
+    });
+    timeCells.forEach((c,i) => { c.textContent = (i < progress && times[i]) ? times[i] : ""; });
+    progressEl.innerHTML = `Completed <b>${progress}</b> / ${switches.length}`;
     if(meta && meta.updatedAt){
       const d = new Date(meta.updatedAt), p = n => String(n).padStart(2,"0");
       updatedEl.textContent = `updated ${p(d.getHours())}:${p(d.getMinutes())} by ${meta.updatedBy||"—"}`;
@@ -414,7 +464,8 @@
   function saveLocal(){
     try{
       localStorage.setItem(KEY, JSON.stringify({
-        checks: boxes.map(b => b.checked),
+        progress: progress,
+        times: times,
         fields: Object.fromEntries(Object.entries(fieldEls).map(([k,el]) => [k, el.value])),
         unit: Object.fromEntries(Object.entries(unitEls).map(([k,el]) => [k, el.checked]))
       }));
@@ -424,7 +475,8 @@
     try{
       const raw = localStorage.getItem(KEY); if(!raw) return;
       const d = JSON.parse(raw);
-      if(d.checks) boxes.forEach((b,i) => b.checked = !!d.checks[i]);
+      if(typeof d.progress === "number") progress = Math.max(0, Math.min(switches.length, d.progress));
+      if(d.times) times = d.times;
       if(d.fields) for(const k in fieldEls) if(d.fields[k]!=null) fieldEls[k].value = d.fields[k];
       if(d.unit) for(const k in unitEls) if(d.unit[k]!=null) unitEls[k].checked = !!d.unit[k];
     }catch(e){}
@@ -432,8 +484,8 @@
 
   function applyRemote(data){
     applyingRemote = true;
-    const checks = (data && data.checks) || {};
-    boxes.forEach((b,i) => { const v = !!checks[i]; if(b.checked !== v) b.checked = v; });
+    progress = (data && typeof data.progress === "number") ? Math.max(0, Math.min(switches.length, data.progress)) : 0;
+    times = (data && data.times) || {};
     const fields = (data && data.fields) || {};
     for(const k in fieldEls){
       const el = fieldEls[k];
@@ -448,7 +500,7 @@
   }
 
   function touchMeta(){ if(online) db.ref(BASE + "/meta").update({ updatedAt: Date.now(), updatedBy: DEV }); }
-  function writeCheck(i, val){ if(online){ db.ref(BASE + "/checks").update({ [i]: val }); touchMeta(); } saveLocal(); }
+  function commit(){ if(online){ db.ref(BASE + "/progress").set(progress); db.ref(BASE + "/times").set(times); touchMeta(); } saveLocal(); }
   function writeField(k, val){ if(online){ db.ref(BASE + "/fields").update({ [k]: val }); touchMeta(); } saveLocal(); }
   function writeUnit(k, val){ if(online){ db.ref(BASE + "/unit").update({ [k]: val }); touchMeta(); } saveLocal(); }
 
@@ -470,11 +522,21 @@
   }
 
   /* ---------- user interactions ---------- */
-  body.addEventListener("change", e => {
-    if(!e.target.matches('input[type="checkbox"]')) return;
+  body.addEventListener("click", e => {
+    const sw = e.target.closest(".sw"); if(!sw) return;
     if(applyingRemote) return;
-    refreshUI();
-    writeCheck(boxes.indexOf(e.target), e.target.checked);
+    const i = switches.indexOf(sw);
+    if(i === progress){                 // complete the current (orange) item
+      times[i] = nowStamp();
+      progress = i + 1;
+      refreshUI(); commit();
+      if(progress === switches.length) openReporterModal();
+    } else if(i === progress - 1){      // revert the most recent (green) item
+      delete times[i];
+      progress = i;
+      refreshUI(); commit();
+    }
+    // items out of turn (red future / earlier green) are not actionable
   });
 
   document.addEventListener("change", e => {
@@ -515,22 +577,59 @@
 
   document.getElementById("printBtn").addEventListener("click", () => window.print());
 
-  document.getElementById("clearBtn").addEventListener("click", () => {
-    const msg = online
-      ? "Reset this form for ALL devices? Everyone's ticks and entries will be cleared."
-      : "Clear all ticks and entries on this device?";
-    if(!confirm(msg)) return;
-    boxes.forEach(b => b.checked = false);
+  /* ---------- reporter modal (opens when the last item is completed) ---------- */
+  const reporterModal = document.getElementById("reporterModal");
+  const modalName = document.getElementById("modalName");
+  function openReporterModal(){
+    modalName.value = (fieldEls.reportby && fieldEls.reportby.value) || "";
+    reporterModal.hidden = false;
+    setTimeout(() => modalName.focus(), 50);
+  }
+  function closeReporterModal(){ reporterModal.hidden = true; }
+  function saveReporter(){
+    const v = modalName.value.trim();
+    if(fieldEls.reportby){ fieldEls.reportby.value = v; writeField("reportby", v); }
+    closeReporterModal();
+  }
+  document.getElementById("modalSave").addEventListener("click", saveReporter);
+  document.getElementById("modalCancel").addEventListener("click", closeReporterModal);
+  reporterModal.addEventListener("click", e => { if(e.target === reporterModal) closeReporterModal(); });
+  modalName.addEventListener("keydown", e => { if(e.key === "Enter") saveReporter(); if(e.key === "Escape") closeReporterModal(); });
+
+  /* ---------- confirm modal (Reset) ---------- */
+  const confirmModal = document.getElementById("confirmModal");
+  const confirmMsg = document.getElementById("confirmMsg");
+  let confirmAction = null;
+  function askConfirm(msg, onYes){ confirmMsg.textContent = msg; confirmAction = onYes; confirmModal.hidden = false; }
+  document.getElementById("confirmYes").addEventListener("click", () => {
+    confirmModal.hidden = true;
+    const fn = confirmAction; confirmAction = null; if(fn) fn();
+  });
+  document.getElementById("confirmNo").addEventListener("click", () => { confirmModal.hidden = true; confirmAction = null; });
+  confirmModal.addEventListener("click", e => { if(e.target === confirmModal){ confirmModal.hidden = true; confirmAction = null; } });
+
+  function doReset(){
+    progress = 0;
+    times = {};
     Object.values(fieldEls).forEach(el => el.value = "");
     Object.values(unitEls).forEach(el => el.checked = false);
+    autoTimeDone = false;          // allow TIME to auto-fill again on next load/snapshot
     refreshUI();
     if(online){
-      db.ref(BASE + "/checks").remove();
+      db.ref(BASE + "/progress").remove();
+      db.ref(BASE + "/times").remove();
       db.ref(BASE + "/fields").remove();
       db.ref(BASE + "/unit").remove();
       touchMeta();
     }
-    saveLocal();   // keeps current logo
+    saveLocal();
+  }
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    const msg = online
+      ? "รีเซ็ตฟอร์มนี้สำหรับ ‘ทุกเครื่อง’ — สถานะและข้อมูลทั้งหมดจะถูกล้าง ดำเนินการต่อหรือไม่?"
+      : "ล้างสถานะและข้อมูลทั้งหมดในเครื่องนี้?";
+    askConfirm(msg, doReset);
   });
 
   initSync();

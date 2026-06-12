@@ -153,6 +153,8 @@
   /* waiting for DCS: start pump switch locked with pulsing grey */
   .sw.pending-dcs .sw-track{animation:swpulse 1.6s ease-in-out infinite;background:#cdd3da!important}
   .sw.pending-dcs .sw-thumb{left:3px}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(20,28,34,.5);display:flex;align-items:center;
+    justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(2px)}
   .modal-backdrop[hidden]{display:none}
   .modal{background:#fff;border-radius:14px;max-width:380px;width:100%;padding:22px 22px 18px;
     box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalIn .18s ease}

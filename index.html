@@ -777,13 +777,24 @@
   }
 
   /* ---- session lock: Operator can only be logged in on one tab/device ---- */
+  let heartbeatTimer = null;
   function claimOperatorSession(){
     if(!online || !db) return;
     const sid = DEV + "_" + Date.now();
     try{ localStorage.setItem(SESSION_KEY, sid); }catch(e){}
     db.ref("sessions/operator").set({ sid, ts: Date.now(), dev: DEV });
+    // refresh ts every 20s so this session is never seen as "stale" while active
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(() => {
+      if(myRole === "operator" && online && db){
+        db.ref("sessions/operator").update({ ts: Date.now() }).catch(()=>{});
+      } else {
+        clearInterval(heartbeatTimer);
+      }
+    }, 20000);
   }
   function releaseOperatorSession(){
+    clearInterval(heartbeatTimer);
     if(!online || !db) return;
     db.ref("sessions/operator").remove();
     try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
@@ -818,14 +829,23 @@
     if(pass !== PASSWORDS[role]){ loginError.textContent="รหัสผ่านไม่ถูกต้อง"; loginPass.value=""; loginPass.focus(); return; }
     // Operator: check session not taken
     if(role === "operator" && online && db){
-      db.ref("sessions/operator").once("value", snap => {
-        const d = snap.val();
-        if(d && d.dev !== DEV){
-          loginError.textContent="⚠️ Operator กำลังใช้งานบนอุปกรณ์อื่นอยู่";
-          return;
-        }
-        myRole = "operator"; closeLoginModal(); applyRoleUI(); claimOperatorSession(); applyDcsState();
-      });
+      db.ref("sessions/operator").once("value")
+        .then(snap => {
+          const d = snap.val();
+          const STALE_MS = 5 * 60 * 1000; // no heartbeat for 5 min = device crashed/closed, slot frees up
+          const isStale = d && d.ts && (Date.now() - d.ts > STALE_MS);
+          if(d && d.dev !== DEV && !isStale){
+            loginError.textContent = "⚠️ Operator กำลังใช้งานบนอุปกรณ์อื่นอยู่ — รอจนกว่าเครื่องนั้นจะ Logout";
+            return;
+          }
+          myRole = "operator"; closeLoginModal(); applyRoleUI(); claimOperatorSession(); applyDcsState();
+        })
+        .catch(err => {
+          // permission denied or network error on session check -> don't block login,
+          // just proceed without the cross-device lock for this attempt
+          console.error("session check failed:", err);
+          myRole = "operator"; closeLoginModal(); applyRoleUI(); claimOperatorSession(); applyDcsState();
+        });
     } else {
       myRole = role; closeLoginModal(); applyRoleUI(); applyDcsState();
     }
@@ -844,6 +864,13 @@
   document.getElementById("logoutBtn").addEventListener("click", doLogout);
   loginModal.addEventListener("click", e => { if(e.target===loginModal) closeLoginModal(); });
   loginPass.addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); if(e.key==="Escape") closeLoginModal(); });
+
+  // free the operator slot if this tab is closed/refreshed without an explicit logout
+  window.addEventListener("pagehide", () => {
+    if(myRole === "operator" && online && db){
+      db.ref("sessions/operator").remove();
+    }
+  });
 
   /* ---- DCS APPROVAL state ---- */
   // dcsState: null | "pending" | "approved"

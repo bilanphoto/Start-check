@@ -564,18 +564,22 @@
     }catch(e){}
   }
 
+  let lastAppliedUpdate = 0; // timestamp of the last remote update we've applied
   function applyRemote(data){
     applyingRemote = true;
     const remoteProgress = (data && typeof data.progress === "number")
       ? Math.max(0, Math.min(switches.length, data.progress)) : 0;
     const remoteTimes = timesFromDb(data && data.times);
-    // only apply remote if it is at least as advanced as local (prevents stale snapshot rollback)
-    if(remoteProgress >= progress){
+    const remoteUpdatedAt = (data && data.meta && data.meta.updatedAt) || 0;
+    // Apply remote if it's a newer update than what we've already applied (covers resets too),
+    // OR if it's at least as advanced as local (covers our own optimistic write echoing back).
+    if(remoteUpdatedAt >= lastAppliedUpdate || remoteProgress >= progress){
       progress = remoteProgress;
       // merge: keep local times that remote doesn't have yet (write-in-flight)
       times = Object.assign({}, remoteTimes, times);
       // but don't keep local times for items that remote says aren't done
       for(const k in times){ if(+k >= progress) delete times[+k]; }
+      if(remoteUpdatedAt) lastAppliedUpdate = remoteUpdatedAt;
     }
     const fields = (data && data.fields) || {};
     for(const k in fieldEls){
@@ -596,9 +600,13 @@
   function touchMeta(){ if(online) db.ref(BASE + "/meta").update({ updatedAt: Date.now(), updatedBy: DEV }); }
   function commit(){
     if(online && db){
-      db.ref(BASE + "/progress").set(progress);
-      db.ref(BASE + "/times").set(Object.keys(times).length ? timesForDb(times) : null);
-      touchMeta();
+      const now = Date.now();
+      lastAppliedUpdate = now;
+      db.ref(BASE).update({
+        progress: progress,
+        times: Object.keys(times).length ? timesForDb(times) : null,
+        meta: { updatedAt: now, updatedBy: DEV }
+      });
     }
   }
   function writeField(k, val){ if(online){ db.ref(BASE + "/fields").update({ [k]: val }); touchMeta(); } saveLocal(); }
@@ -719,12 +727,16 @@
     autoTimeDone = false;
     applyDcsState(); refreshUI();
     if(online){
-      db.ref(BASE + "/progress").remove();
-      db.ref(BASE + "/times").remove();
-      db.ref(BASE + "/fields").remove();
-      db.ref(BASE + "/unit").remove();
-      db.ref(BASE + "/dcsState").remove();
-      touchMeta();
+      const now = Date.now();
+      lastAppliedUpdate = now;   // this device's own reset is authoritative
+      db.ref(BASE).update({
+        progress: 0,
+        times: null,
+        fields: null,
+        unit: null,
+        dcsState: null,
+        meta: { updatedAt: now, updatedBy: DEV }
+      });
     }
     saveLocal();
   }

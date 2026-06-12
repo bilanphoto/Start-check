@@ -95,7 +95,8 @@
   .c-cond{justify-content:center;text-align:center}
   .cond-tag{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--tag);
     background:#e7f0ef;border:1px solid #bcd6d2;padding:2px 7px;border-radius:5px;line-height:1.25;white-space:normal;}
-  .c-done{justify-content:center}
+  .c-done{justify-content:center;pointer-events:none}
+  .c-done .sw{pointer-events:auto}
   .c-time{justify-content:center;font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-align:center}
 
   /* sliding 3-state switch: red=locked, orange=current, green=done */
@@ -131,8 +132,27 @@
     border-bottom:1.5px solid var(--line-strong);background:transparent;padding:6px 4px;}
   .reportby input:focus{outline:none;border-bottom-color:var(--accent);background:#fffceb}
 
-  .modal-backdrop{position:fixed;inset:0;background:rgba(20,28,34,.5);display:flex;align-items:center;
-    justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(2px)}
+  .btn[hidden]{display:none!important}
+  .pill-status[hidden]{display:none!important}
+  .role-badge{font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 10px;border-radius:20px;
+    border:1px solid var(--line);white-space:nowrap;letter-spacing:.03em}
+  .role-badge.operator{background:#0f4c4c;color:#eaf3f1;border-color:#0f4c4c}
+  .role-badge.dcs{background:#1a3a6b;color:#ddeeff;border-color:#1a3a6b}
+  .role-badge.viewer{background:#f0f0f0;color:#6b7480;border-color:#ccc}
+  .btn-logout{font-size:12px;padding:5px 9px;border-radius:6px}
+
+  /* "Approved by DCS" inline tag */
+  .dcs-approved{font-family:var(--mono);font-size:11px;font-weight:700;color:#1c7a4d;
+    background:#e4f7ed;border:1px solid #86d9aa;border-radius:5px;padding:2px 8px;
+    margin-left:auto;white-space:nowrap}
+
+  /* read-only: switches unclickable for viewer/DCS */
+  .readonly-mode .sw{pointer-events:none;opacity:.85}
+  .readonly-mode #clearBtn,.readonly-mode #nowBtn{pointer-events:none;opacity:.4}
+
+  /* waiting for DCS: start pump switch locked with pulsing grey */
+  .sw.pending-dcs .sw-track{animation:swpulse 1.6s ease-in-out infinite;background:#cdd3da!important}
+  .sw.pending-dcs .sw-thumb{left:3px}
   .modal-backdrop[hidden]{display:none}
   .modal{background:#fff;border-radius:14px;max-width:380px;width:100%;padding:22px 22px 18px;
     box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalIn .18s ease}
@@ -230,6 +250,9 @@
   <div class="toolbar">
     <span class="brand">QSHEF · GSP-19-012-0724 · Rev.4</span>
     <span class="pill-status" id="status">● starting…</span>
+    <span id="roleBadge"><span class="role-badge viewer">👁 Viewer</span></span>
+    <button class="btn btn-logout" id="logoutBtn" hidden>Logout</button>
+    <button class="btn" id="loginBtn">🔐 Login</button>
     <button class="btn" id="nowBtn">⏱ Set date &amp; time</button>
     <button class="btn danger" id="clearBtn">Reset</button>
     <button class="btn primary" id="printBtn">🖶 Print / PDF</button>
@@ -297,7 +320,38 @@
     </div>
   </div>
 
-  <!-- confirm modal (used by Reset) -->
+  <!-- login modal -->
+  <div class="modal-backdrop" id="loginModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <h3 id="loginTitle">เข้าสู่ระบบ</h3>
+      <p id="loginError" style="color:#d8423b;font-size:13px;min-height:18px"></p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <select id="loginRole" style="font:inherit;font-size:14px;padding:9px 10px;border:1.5px solid var(--line-strong);border-radius:8px;background:var(--field)">
+          <option value="">-- เลือก Role --</option>
+          <option value="operator">Operator</option>
+          <option value="dcs">DCS</option>
+        </select>
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="off"
+          style="font:inherit;font-size:15px;border:1.5px solid var(--line-strong);border-radius:8px;padding:10px 12px;background:var(--field)">
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn" id="loginCancel" type="button">ยกเลิก</button>
+        <button class="btn primary" id="loginSubmit" type="button">เข้าสู่ระบบ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DCS approval request modal (shown to DCS user) -->
+  <div class="modal-backdrop" id="dcsModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>แจ้งเตือนจาก Operator</h3>
+      <p style="font-size:14px;color:var(--ink)">Operator ต้องการ <b>Start Pump</b> อนุญาตหรือไม่?</p>
+      <div class="modal-actions">
+        <button class="btn danger" id="dcsReject" type="button">ยกเลิก</button>
+        <button class="btn primary" id="dcsApprove" type="button">✔ ยืนยัน</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-backdrop" id="confirmModal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
       <h3 id="confirmTitle">รีเซ็ตฟอร์ม</h3>
@@ -377,8 +431,12 @@
     const cond = it[2] ? `<div class="cell c-cond"><span class="cond-tag">${it[2]}</span></div>` : `<div class="cell c-cond"></div>`;
     const mcond = it[2] ? `<span class="mcond"><span class="cond-tag">${it[2]}</span></span>` : "";
     const gi = GI++;
+    const isStartPump = gi === 11;
+    const itemLabel = isStartPump
+      ? `${it[1]} ${mcond}<span class="dcs-approved" id="dcsApprovedTag" hidden>✔ Approved by DCS</span>`
+      : `${it[1]} ${mcond}`;
     return `<div class="row-item"><div class="cell c-step">${it[0]}</div>
-      <div class="cell c-item">${it[1]} ${mcond}</div>${cond}
+      <div class="cell c-item" style="${isStartPump?'display:flex;align-items:center;gap:6px':''}">${itemLabel}</div>${cond}
       <div class="cell c-done">${switchHtml(gi)}</div>
       <div class="cell c-time" data-idx="${gi}"></div></div>`;
   };
@@ -486,6 +544,7 @@
       localStorage.setItem(KEY, JSON.stringify({
         progress: progress,
         times: timesForDb(times),
+        dcsState: dcsState,
         fields: Object.fromEntries(Object.entries(fieldEls).map(([k,el]) => [k, el.value])),
         unit: Object.fromEntries(Object.entries(unitEls).map(([k,el]) => [k, el.checked]))
       }));
@@ -497,6 +556,7 @@
       const d = JSON.parse(raw);
       if(typeof d.progress === "number") progress = Math.max(0, Math.min(switches.length, d.progress));
       if(d.times) times = timesFromDb(d.times);
+      if(d.dcsState !== undefined) dcsState = d.dcsState || null;
       if(d.fields) for(const k in fieldEls) if(d.fields[k]!=null) fieldEls[k].value = d.fields[k];
       if(d.unit) for(const k in unitEls) if(d.unit[k]!=null) unitEls[k].checked = !!d.unit[k];
     }catch(e){}
@@ -525,6 +585,9 @@
     const unit = (data && data.unit) || {};
     for(const k in unitEls){ const v = !!unit[k]; if(unitEls[k].checked !== v) unitEls[k].checked = v; }
     applyingRemote = false;
+    // sync dcsState from remote
+    const remoteDcs = (data && data.dcsState) || null;
+    if(remoteDcs !== dcsState){ dcsState = remoteDcs; applyDcsState(); }
     refreshUI(data && data.meta);
   }
 
@@ -548,6 +611,7 @@
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.database();
       online = true; setStatus("online");
+      watchOperatorSession(null);
       db.ref(BASE).on("value",
         snap => { applyRemote(snap.val()); setStatus("online"); maybeAutoTime(); },
         err  => { console.error(err); online = false; setStatus("error"); loadLocal(); refreshUI(); });
@@ -647,17 +711,17 @@
   confirmModal.addEventListener("click", e => { if(e.target === confirmModal){ confirmModal.hidden = true; confirmAction = null; } });
 
   function doReset(){
-    progress = 0;
-    times = {};
+    progress = 0; times = {}; dcsState = null;
     Object.values(fieldEls).forEach(el => el.value = "");
     Object.values(unitEls).forEach(el => el.checked = false);
-    autoTimeDone = false;          // allow TIME to auto-fill again on next load/snapshot
-    refreshUI();
+    autoTimeDone = false;
+    applyDcsState(); refreshUI();
     if(online){
       db.ref(BASE + "/progress").remove();
       db.ref(BASE + "/times").remove();
       db.ref(BASE + "/fields").remove();
       db.ref(BASE + "/unit").remove();
+      db.ref(BASE + "/dcsState").remove();
       touchMeta();
     }
     saveLocal();
@@ -670,6 +734,210 @@
     askConfirm(msg, doReset);
   });
 
+  /* ============================================================
+     AUTH & ROLE SYSTEM
+     Passwords are stored here (plain — change before production)
+     role: "operator" | "dcs" | null (viewer)
+  ============================================================ */
+  const PASSWORDS = { operator: "op1234", dcs: "dcs5678" };
+  const IDX_MANUAL = 10;   // item 11 = index 10 (0-based)
+  const IDX_START  = 11;   // START PUMP = index 11
+
+  let myRole = null;        // this tab's role
+  const SESSION_KEY = "pump_session";
+
+  function getRoleBadgeHtml(role){
+    if(role === "operator") return `<span class="role-badge operator">👷 Operator</span>`;
+    if(role === "dcs")      return `<span class="role-badge dcs">🖥 DCS</span>`;
+    return `<span class="role-badge viewer">👁 Viewer</span>`;
+  }
+
+  function applyRoleUI(){
+    const sheet = document.getElementById("sheet");
+    const badge = document.getElementById("roleBadge");
+    const logoutBtn = document.getElementById("logoutBtn");
+    if(myRole){
+      badge.innerHTML = getRoleBadgeHtml(myRole);
+      logoutBtn.hidden = false;
+    } else {
+      badge.innerHTML = getRoleBadgeHtml(null);
+      logoutBtn.hidden = true;
+    }
+    // DCS and viewers cannot control switches or fields
+    if(myRole === "operator"){
+      sheet.classList.remove("readonly-mode");
+    } else {
+      sheet.classList.add("readonly-mode");
+    }
+    // login button label
+    const loginBtn = document.getElementById("loginBtn");
+    loginBtn.textContent = myRole ? "🔓 " + (myRole==="operator"?"Operator":"DCS") : "🔐 Login";
+  }
+
+  /* ---- session lock: Operator can only be logged in on one tab/device ---- */
+  function claimOperatorSession(){
+    if(!online || !db) return;
+    const sid = DEV + "_" + Date.now();
+    try{ localStorage.setItem(SESSION_KEY, sid); }catch(e){}
+    db.ref("sessions/operator").set({ sid, ts: Date.now(), dev: DEV });
+  }
+  function releaseOperatorSession(){
+    if(!online || !db) return;
+    db.ref("sessions/operator").remove();
+    try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+  }
+  function watchOperatorSession(cb){
+    if(!online || !db) return;
+    db.ref("sessions/operator").on("value", snap => {
+      const d = snap.val();
+      let myLocal; try{ myLocal = localStorage.getItem(SESSION_KEY); }catch(e){}
+      // if another device owns the session, kick this Operator out
+      if(myRole === "operator" && d && d.dev !== DEV){
+        myRole = null; applyRoleUI();
+        alert("⚠️ Session ถูกใช้งานบนอุปกรณ์อื่น คุณถูก logout อัตโนมัติ");
+      }
+      cb && cb(d);
+    });
+  }
+
+  /* ---- login / logout ---- */
+  const loginModal  = document.getElementById("loginModal");
+  const loginError  = document.getElementById("loginError");
+  const loginRole   = document.getElementById("loginRole");
+  const loginPass   = document.getElementById("loginPass");
+
+  function openLoginModal(){ loginError.textContent=""; loginRole.value=""; loginPass.value=""; loginModal.hidden=false; setTimeout(()=>loginRole.focus(),50); }
+  function closeLoginModal(){ loginModal.hidden=true; }
+
+  function doLogin(){
+    const role = loginRole.value;
+    const pass = loginPass.value;
+    if(!role){ loginError.textContent="กรุณาเลือก Role"; return; }
+    if(pass !== PASSWORDS[role]){ loginError.textContent="รหัสผ่านไม่ถูกต้อง"; loginPass.value=""; loginPass.focus(); return; }
+    // Operator: check session not taken
+    if(role === "operator" && online && db){
+      db.ref("sessions/operator").once("value", snap => {
+        const d = snap.val();
+        if(d && d.dev !== DEV){
+          loginError.textContent="⚠️ Operator กำลังใช้งานบนอุปกรณ์อื่นอยู่";
+          return;
+        }
+        myRole = "operator"; closeLoginModal(); applyRoleUI(); claimOperatorSession(); applyDcsState();
+      });
+    } else {
+      myRole = role; closeLoginModal(); applyRoleUI(); applyDcsState();
+    }
+  }
+
+  function doLogout(){
+    if(myRole === "operator") releaseOperatorSession();
+    myRole = null; applyRoleUI(); applyDcsState();
+  }
+
+  document.getElementById("loginBtn").addEventListener("click", () => {
+    if(myRole) doLogout(); else openLoginModal();
+  });
+  document.getElementById("loginCancel").addEventListener("click", closeLoginModal);
+  document.getElementById("loginSubmit").addEventListener("click", doLogin);
+  document.getElementById("logoutBtn").addEventListener("click", doLogout);
+  loginModal.addEventListener("click", e => { if(e.target===loginModal) closeLoginModal(); });
+  loginPass.addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); if(e.key==="Escape") closeLoginModal(); });
+
+  /* ---- DCS APPROVAL state ---- */
+  // dcsState: null | "pending" | "approved"
+  let dcsState = null;
+
+  function applyDcsState(){
+    const sw11 = switches[IDX_START];
+    const tag  = document.getElementById("dcsApprovedTag");
+    const dcsModalEl = document.getElementById("dcsModal");
+
+    if(dcsState === "approved"){
+      sw11.classList.remove("pending-dcs");
+      if(tag) tag.hidden = false;
+      dcsModalEl.hidden = true;
+    } else if(dcsState === "pending"){
+      sw11.classList.add("pending-dcs");
+      if(tag) tag.hidden = true;
+      if(myRole === "dcs") dcsModalEl.hidden = false;
+    } else {
+      sw11.classList.remove("pending-dcs");
+      if(tag) tag.hidden = true;
+      dcsModalEl.hidden = true;
+    }
+    refreshUI();   // recolour START PUMP switch immediately
+  }
+
+  function writeDcsState(state){
+    dcsState = state;
+    applyDcsState();
+    if(online && db) db.ref(BASE + "/dcsState").set(state || null);
+    saveLocal();
+  }
+
+  // Override refreshUI to respect DCS lock on START PUMP switch
+  const _origRefreshUI = refreshUI;
+  refreshUI = function(meta){
+    _origRefreshUI(meta);
+    const sw11 = switches[IDX_START];
+    if(!sw11) return;
+    if(progress <= IDX_START){
+      const item11Green = progress > IDX_MANUAL;
+      if(!item11Green || dcsState !== "approved"){
+        // keep red, add pending pulse if waiting for DCS
+        sw11.classList.remove("orange","green"); sw11.classList.add("red");
+        sw11.classList.toggle("pending-dcs", dcsState === "pending" && item11Green);
+      } else {
+        // approved + item11 done → show orange (ready to click)
+        sw11.classList.remove("red","green","pending-dcs"); sw11.classList.add("orange");
+      }
+    }
+  };
+
+  /* ---- DCS modal buttons ---- */
+  document.getElementById("dcsApprove").addEventListener("click", () => {
+    writeDcsState("approved");
+  });
+  document.getElementById("dcsReject").addEventListener("click", () => {
+    writeDcsState(null);
+    // revert item 11 back so operator must redo
+    if(progress > IDX_MANUAL){
+      progress = IDX_MANUAL;
+      delete times[IDX_MANUAL];
+      saveLocal();
+      refreshUI();
+      if(online && db){ db.ref(BASE+"/progress").set(progress); db.ref(BASE+"/times").set(Object.keys(times).length?timesForDb(times):null); touchMeta(); }
+    }
+  });
+
+  /* ---- intercept click on item 11 to trigger DCS request ---- */
+  const _origBodyClick = body.onclick; // store if any
+  body.addEventListener("click", e => {
+    const sw = e.target.closest(".sw"); if(!sw) return;
+    const i = switches.indexOf(sw);
+    // Intercept: completing item 11 (MANUAL MODE) → request DCS
+    if(i === IDX_MANUAL && i === progress && myRole === "operator"){
+      // let normal handler run (progress becomes 11), THEN request DCS
+      // We do this in a microtask so the original listener fires first
+      setTimeout(() => {
+        if(progress === IDX_START && dcsState !== "approved"){
+          writeDcsState("pending");
+        }
+      }, 0);
+    }
+    // Block START PUMP if not approved
+    if(i === IDX_START && i === progress){
+      if(dcsState !== "approved"){
+        e.stopImmediatePropagation();
+        return;
+      }
+    }
+  }, true); // capture phase — runs before the existing listener
+
+  /* ============================================================
+     END AUTH SYSTEM
+  ============================================================ */
+  applyRoleUI();   // set initial viewer state
   initSync();
 </script>
 </body>
